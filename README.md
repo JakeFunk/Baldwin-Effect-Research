@@ -21,7 +21,15 @@ The experiment is conducted using the Lunar Lander environment from OpenAI’s G
 
 **Reward Structure:** The agent receives a reward, and the episode return is the sum of all step rewards. Rewards favor proximity to the landing pad, slow descent, stable orientation, and ground contact, while engine use and tilt are penalized. Episodes end with +100 for a safe landing or −100 for a crash, and a score of 200 or higher is considered a solution.
 
-### Matt add your env details
+### MiniGrid Door Key
+
+**Type:** MiniGrid-DoorKey-8x8-v0
+
+**State Space:** A partially observable 7x7x3 tensor representing the agent's egocentric view of the grid world, oriented in the direction the agent is facing. Each cell in the observation encodes the object type (empty, wall, key, door, goal), the object color which is used to associate keys with doors, and the state of the object, e.g. if a door is open or closed. `FlatObsWrapper` flattens this to a 147-dimensional vector.
+
+**Action Space:** 5 discrete actions: turn left, turn right, move forward, pick up an object, and toggle (activate) an object.
+
+**Reward Structure:** The agent receives a sparse reward, and the episode return is the sum of rewards over all steps. A positive reward is given only when the agent reaches the goal tile after unlocking and opening the correct door using the matching key. All intermediate actions receive zero reward. The final reward is scaled based on the number of steps taken, encouraging the agent to explore and reach the goal state. Episodes terminate upon reaching the goal or when the maximum step limit is exceeded.
 
 ### Ethan add your env details
 
