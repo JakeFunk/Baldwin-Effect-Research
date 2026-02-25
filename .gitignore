@@ -1,0 +1,10 @@
+# Logs / CSVs
+*.csv
+
+# macOS
+.DS_Store
+
+# Virtual environment
+venv/
+.env/
+
