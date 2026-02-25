@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-
+import csv
 
 env = gym.make("LunarLander-v3", render_mode = "human")
 state_shape = env.observation_space.shape
@@ -140,7 +140,12 @@ agent = Agent(state_size, number_actions)
 train_env = gym.make("LunarLander-v3")
 render_env = gym.make("LunarLander-v3", render_mode="human")
 
-num_episodes = 500
+num_episodes = 1000
+
+# Open CSV and write header
+csv_file = open("ideal_agent_behavior.csv", "w", newline="")
+writer = csv.writer(csv_file)
+writer.writerow(["episode", "step", "state", "action", "reward", "cumulative_reward"])
 
 for episode in range(num_episodes):
 
@@ -150,6 +155,7 @@ for episode in range(num_episodes):
     state, _ = env.reset()
     done = False
     total_reward = 0
+    step_num = 0
 
     while not done:
         action = agent.get_action(state)
@@ -159,8 +165,19 @@ for episode in range(num_episodes):
         if not render:
             agent.step(state, action, reward, next_state, done)
 
-        state = next_state
         total_reward += reward
+
+        writer.writerow([
+            episode,
+            step_num,
+            state.tolist(),
+            action,
+            reward,
+            total_reward
+        ])
+
+        state = next_state
+        step_num += 1
 
     if not render:
         agent.decay_epsilon()
@@ -168,9 +185,10 @@ for episode in range(num_episodes):
     if episode % 10 == 0:
         print(f"Episode {episode} Reward {total_reward:.1f} Render={render}")
 
+csv_file.close()
 train_env.close()
 render_env.close()
 
-torch.save(agent.network.state_dict(), "Ideal_Lunar_Lander.pth")
-print(f"Model has been saved as Ideal_Lunar_Lander")
+torch.save(agent.network.state_dict(), "LL_Ideal_Agent.pth")
+print(f"Model has been saved as LL_Ideal_Agent")
 
