@@ -52,17 +52,20 @@ class MGGeneticAlgorithm:
     def rollout_reward(self, model, env):
         # Ensure the environment is set to a start state.
         obs = env.reset()
+        final_reward = 0.0
 
         for _ in range(MAX_STEPS):
             # Predict the best action, then act in the environment.
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, _ = env.step(action)
+            
+            final_reward = float(reward[0])
 
             # Done can be either a goal or lava.
             if done[0]:
                 break
 
-        return reward  # type: ignore
+        return final_reward
 
     def agreement(self, agent, expert, env):
         obs = env.reset()
