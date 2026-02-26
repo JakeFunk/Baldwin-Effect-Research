@@ -21,15 +21,25 @@ The experiment is conducted using the Lunar Lander environment from OpenAI’s G
 
 **Reward Structure:** The agent receives a reward, and the episode return is the sum of all step rewards. Rewards favor proximity to the landing pad, slow descent, stable orientation, and ground contact, while engine use and tilt are penalized. Episodes end with +100 for a safe landing or −100 for a crash, and a score of 200 or higher is considered a solution.
 
-### MiniGrid Door Key
+### MiniGrid Lava Gap
 
-**Type:** MiniGrid-DoorKey-8x8-v0
+**Type:** MiniGrid-LavaGapS7-v0
 
-**State Space:** A partially observable 7x7x3 tensor representing the agent's egocentric view of the grid world, oriented in the direction the agent is facing. Each cell in the observation encodes the object type (empty, wall, key, door, goal), the object color which is used to associate keys with doors, and the state of the object, e.g. if a door is open or closed. `FlatObsWrapper` flattens this to a 147-dimensional vector.
+**State Space:** The environment is wrapped in the FlatObsWrapper and produces a partially observable egocentric view as a 7×7×3 tensor. Each cell encodes a 3-dimensional tuple:
 
-**Action Space:** 5 discrete actions: turn left, turn right, move forward, pick up an object, and toggle (activate) an object.
+- Object type e.g., empty, lava, wall, goal
+- Object color (not applicable in this environment)
+- State (not applicable in this environment)
 
-**Reward Structure:** The agent receives a sparse reward, and the episode return is the sum of rewards over all steps. A positive reward is given only when the agent reaches the goal tile after unlocking and opening the correct door using the matching key. All intermediate actions receive zero reward. The final reward is scaled based on the number of steps taken, encouraging the agent to explore and reach the goal state. Episodes terminate upon reaching the goal or when the maximum step limit is exceeded.
+The observation is oriented relative to the agent’s facing direction, meaning rotations rotate the observation accordingly. Additionally, the observation is transposed using Stable-Baselines3’s VecTransposeImage so that it can be used directly with SB3’s CNN-based PPO policy (CnnPolicy), which expects channel-first format (channels, height, width).
+
+**Action Space:** The action space is restricted by the ValidActionsWrapper to allow only meaningful actions for this environment:
+
+- Turn Left
+- Turn Right
+- Move Forward
+
+**Reward Structure:** The environment uses a sparse reward system. The agent receives a reward only upon reaching the goal tile, which is scaled according to the number of steps taken: 1 - 0.9 * (step_count / max_steps). If the agent fails to reach the goal within the maximum number of steps or steps into lava, it receives a reward of zero. Intermediate actions do not yield any reward, and episodes terminate when the agent reaches the goal, steps in lava, or exceeds the maximum step limit.
 
 ### Ethan add your env details
 
