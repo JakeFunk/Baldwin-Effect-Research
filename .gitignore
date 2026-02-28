@@ -1,5 +1,6 @@
-# Logs / CSVs
+# Data Analysis & Models
 *.csv
+*.png
 *.zip
 
 # macOS

@@ -81,14 +81,15 @@ def main():
 
             # Post-learning evaluation.
             post_reward = ga.rollout_reward(ind, env)
+            learning_gain = post_reward - pre_reward
 
             # Append data to local lists for later input into the overall avg tracking.
             gen_pre_rewards.append(pre_reward)
             gen_post_rewards.append(post_reward)
-            gen_gains.append(post_reward - pre_reward)
+            gen_gains.append(learning_gain)
             gen_agreements.append(agreement)
             gen_entropies.append(entropy)
-            scored.append((post_reward, ind))
+            scored.append((learning_gain, ind))
 
             # Write output to terminal and log in CSV
             print(
