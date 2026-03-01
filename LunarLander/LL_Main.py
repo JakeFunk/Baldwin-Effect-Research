@@ -4,7 +4,7 @@ import csv
 from LL_Constants import gene_space
 from LL_Fitness import fitness_function
 
-POPULATION_SIZE = 10
+POPULATION_SIZE = 50
 NUM_GENERATIONS = 100
 NUM_PARENTS = 6
 

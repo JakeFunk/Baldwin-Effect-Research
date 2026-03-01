@@ -39,14 +39,15 @@ class ReplayMemory(object):
 class DQN(nn.Module):
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
-        self.layer1 = nn.Linear(n_observations, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, n_actions)
+        self.layer1 = nn.Linear(n_observations, 16)
+        self.layer2 = nn.Linear(16, 16)
+        self.layer3 = nn.Linear(16, n_actions)
 
     def forward(self, x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
+
 class Agent():
     def __init__(self, state_size, action_size):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

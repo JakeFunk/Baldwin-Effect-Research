@@ -59,7 +59,7 @@ def fitness_function(ga_instance, solution, solution_idx):
         agent.decay_epsilon()
 
     trained_rewards = []
-    trained_action_list = []
+    trained_actions_list = []
     agent.epsilon = 0.01
     for _ in range(10):
         state, _ = env.reset()
@@ -92,7 +92,7 @@ def fitness_function(ga_instance, solution, solution_idx):
         'untrained': untrained_performance,
         'trained': trained_performance,
         'learning_delta': learning_delta,
-        'trained_actions':trained_action_list,
+        'trained_actions':trained_actions_list,
         'untrained_actions':untrained_actions_list
     })
 

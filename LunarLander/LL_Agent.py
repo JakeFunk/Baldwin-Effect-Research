@@ -27,7 +27,7 @@ class Agent():
         self.action_size = action_size
 
         if genome is None:
-            genome = [3, 64, 0, 64, 0, 32, 0, 16, 0] + [0.0] * 3588
+            genome = [2, 16, 0, 16, 0, 16, 0] + [0.0] * 756
 
 
         self.network = DQN(state_size, action_size, genome).to(self.device)
