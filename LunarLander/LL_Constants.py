@@ -22,6 +22,7 @@ max_out = (32 * number_actions) + number_actions # 132
 MAX_WEIGHTS = max_l1 + max_l2 + max_l3 + max_l4 + max_out # 3588 total weight genes
 
 # First 9 genes are architecture, the next 3588 are weights (-1.0 to 1.0)
+"""
 gene_space = [
     {'low': 2, 'high': 5},
     {'low': 8, 'high': 32}, {'low': 0, 'high': 4},
@@ -29,3 +30,13 @@ gene_space = [
     {'low': 8, 'high': 32}, {'low': 0, 'high': 4},
     {'low': 8, 'high': 32}, {'low': 0, 'high': 4},
 ] + [{'low': -1.0, 'high': 1.0}] * MAX_WEIGHTS
+"""
+
+
+gene_space = [
+    {'low': 2, 'high': 5},                    # num_layers
+    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer1 size, activation
+    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer2 size, activation
+    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer3 size, activation
+    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer4 size, activation
+]

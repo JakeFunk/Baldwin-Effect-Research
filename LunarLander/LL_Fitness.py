@@ -26,18 +26,23 @@ def fitness_function(ga_instance, solution, solution_idx):
     env = gym.make("LunarLander-v3")
 
     untrained_rewards = []
+    untrained_actions_list = []
     agent.epsilon = 0.01
-    for _ in range(10):
+    for _ in range(5):
         state, _ = env.reset()
         done = False
         total_reward = 0
+        actions_taken = []
+
         while not done:
             action = agent.get_action(state)
+            actions_taken.append(action)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             state = next_state
             total_reward += reward
         untrained_rewards.append(total_reward)
+        untrained_actions_list.append(actions_taken)
 
     untrained_performance = np.mean(untrained_rewards)
 
@@ -54,18 +59,24 @@ def fitness_function(ga_instance, solution, solution_idx):
         agent.decay_epsilon()
 
     trained_rewards = []
+    trained_action_list = []
     agent.epsilon = 0.01
-    for _ in range(25):
+    for _ in range(10):
         state, _ = env.reset()
         done = False
         total_reward = 0
+        actions_taken = []
+
         while not done:
             action = agent.get_action(state)
+            actions_taken.append(action)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             state = next_state
             total_reward += reward
         trained_rewards.append(total_reward)
+        trained_actions_list.append(actions_taken)
+
 
     trained_performance = np.mean(trained_rewards)
     learning_delta = trained_performance - untrained_performance

@@ -29,6 +29,7 @@ class Agent():
         if genome is None:
             genome = [3, 64, 0, 64, 0, 32, 0, 16, 0] + [0.0] * 3588
 
+
         self.network = DQN(state_size, action_size, genome).to(self.device)
         self.target_network = DQN(state_size, action_size, genome).to(self.device)
         self.target_network.load_state_dict(self.network.state_dict())
