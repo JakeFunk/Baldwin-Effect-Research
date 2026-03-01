@@ -91,7 +91,9 @@ def fitness_function(ga_instance, solution, solution_idx):
         'solution_idx': solution_idx,
         'untrained': untrained_performance,
         'trained': trained_performance,
-        'learning_delta': learning_delta
+        'learning_delta': learning_delta,
+        'trained_actions':trained_action_list,
+        'untrained_actions':untrained_actions_list
     })
 
     print(f"Gen {ga_instance.generations_completed}, Agent {solution_idx}: "
