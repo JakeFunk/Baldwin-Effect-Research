@@ -4,31 +4,13 @@ from LL_Agent import Agent
 from LL_Constants import state_size, number_actions
 
 def fitness_function(ga_instance, solution, solution_idx):
-    """
-        Function:    fitness_function
-        Purpose:     Evaluate the fitness of a genome by testing its learning capability in LunarLander.
-        Parameters:
-                     - ga_instance: The PyGAD genetic algorithm instance managing evolution.
-                     - solution: The genome array to evaluate.
-                     - solution_idx: Index of this solution in the current population.
-        Returns:     Fitness score (mean reward after training).
-
-        Details:
-                    - Creates an agent with architecture specified by the genome.
-                    - Measures untrained performance over a set amount of episodes (epsilon=0.01).
-                    - Trains agent for a set amount of episodes with epsilon-greedy exploration.
-                    - Measures trained performance over 5 episodes (epsilon=0.01).
-                    - Fitness is the mean trained performance (post-learning reward).
-                    - Logs metrics including untrained, trained, and learning delta to ga_instance.
-                    - Designed to detect Baldwin Effect: genomes that learn efficiently have higher fitness.
-    """
     agent = Agent(state_size, number_actions, solution)
     env = gym.make("LunarLander-v3")
 
     untrained_rewards = []
     untrained_actions_list = []
     agent.epsilon = 0.01
-    for _ in range(5):
+    for _ in range(10):
         state, _ = env.reset()
         done = False
         total_reward = 0
@@ -96,8 +78,11 @@ def fitness_function(ga_instance, solution, solution_idx):
         'untrained_actions':untrained_actions_list
     })
 
-    print(f"Gen {ga_instance.generations_completed}, Agent {solution_idx}: "
-          f"Untrained={untrained_performance:.1f}, Trained={trained_performance:.1f}, "
-          f"Delta={learning_delta:.1f}")
 
-    return trained_performance
+    total_fitness = (0.6 * trained_performance) + (0.4 * untrained_performance)
+
+    print(f"Gen {ga_instance.generations_completed}, Agent {solution_idx}: "
+        f"U={untrained_performance:.1f}, T={trained_performance:.1f}, "
+        f"Fit={total_fitness:.1f}")
+
+    return total_fitness

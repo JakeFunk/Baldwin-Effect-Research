@@ -16,21 +16,6 @@ class ReplayMemory(object):
         return len(self.memory)
 
 class DQN(nn.Module):
-    """
-    Class:       DQN (Deep Q-Network)
-    Purpose:     Neural network model to approximate Q-values for RL.
-    Parameters:
-                 - n_observations: Number of input features (state dimensions).
-                 - n_actions: Number of possible actions.
-                 - genome: Genome array encoding architecture, activations, and optional weights.
-    Methods:
-                 - inject_weights(weight_DNA): Assigns weights directly from genome.
-                 - forward(x): Performs forward pass to produce Q-values.
-    Details:
-                 - Network architecture and activations decoded from genome.
-                 - Supports variable number of layers and activation functions.
-                 - Optional weight injection allows exact genome-determined parameters.
-    """
     def __init__(self, n_observations, n_actions, genome):
         super(DQN, self).__init__()
         
@@ -50,16 +35,6 @@ class DQN(nn.Module):
             self.inject_weights(genome[7:])
 
     def inject_weights(self, weight_DNA):
-        """
-        Function:    inject_weights
-        Purpose:     Initialize network parameters from genome-provided weights.
-        Parameters:
-                     - weight_DNA: List of weight values from genome.
-        Returns:     None
-        Details:
-                     - Iterates over all model parameters and reshapes slices of weight_DNA to match.
-                     - Uses torch.no_grad() to avoid affecting gradient computation.
-        """
         with torch.no_grad():
             ptr = 0
             for param in self.parameters():
@@ -70,17 +45,6 @@ class DQN(nn.Module):
                     ptr += num_param
 
     def forward(self, x):
-        """
-        Function:    forward
-        Purpose:     Compute Q-values for a given input state.
-        Parameters:
-                     - x: Input state tensor or array.
-        Returns:     Tensor of Q-values, one per action.
-        Details:
-                     - Converts input to torch.Tensor if needed.
-                     - Applies each layer and its corresponding activation function.
-                     - Final layer outputs raw Q-values for all actions.
-        """
         if not isinstance(x, torch.Tensor):
             x = torch.tensor(x, dtype=torch.float32)
         for i, layer in enumerate(self.layers):
@@ -89,22 +53,6 @@ class DQN(nn.Module):
         return self.output_layer(x)
 
 def decode_genome(genome, input_size, output_size):
-    """
-    Function:    decode_genome
-    Purpose:     Translate genome array into network architecture and activations.
-    Parameters:
-                 - genome: List of integers defining layers and activations.
-                 - input_size: Number of input features.
-                 - output_size: Number of output actions (not used directly here).
-    Returns:     Dictionary with keys:
-                   - 'layers': list of layer sizes
-                   - 'activations': list of activation functions
-    Details:
-                 - First genome element determines number of hidden layers (max 4).
-                 - Each layer defined by size and activation index.
-                 - Activation index mapped via activation_map: ReLU, Tanh, Sigmoid, Leaky ReLU.
-                 - Enables flexible, genome-driven network architectures for evolutionary RL.
-    """
     activation_map = {
         0: F.relu, 1: torch.tanh, 2: torch.sigmoid, 3: lambda x: F.leaky_relu(x, 0.01)
     }

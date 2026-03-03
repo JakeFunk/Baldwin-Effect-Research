@@ -3,31 +3,17 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from LL_DQN import ReplayMemory, DQN
-from LL_Constants import learning_rate, minibatch_size, discount_factor, replay_buffer_size, Transition, interpolation_parameter
+from LL_Constants import MAX_WEIGHTS, learning_rate, minibatch_size, discount_factor, replay_buffer_size, Transition, interpolation_parameter
 
 
 class Agent():
-    """
-        Class:       Agent
-        Purpose:     A DQN agent with optional genome-specified architecture for evolutionary optimization.
-        Parameters:
-                    - state_size: Dimension of the state observation space.
-                    - action_size: Number of discrete actions available.
-                    - genome: Optional numerical array encoding the neural network architecture.
-                              If None, uses a default architecture.
-        Details:
-                    - Creates both policy and target networks using genome-specified or default architecture.
-                    - Implements epsilon-greedy exploration with decay.
-                    - Uses experience replay and target network for stable learning.
-                    - Supports both evolutionary (with genome) and standard DQN training.
-    """
     def __init__(self, state_size, action_size, genome=None):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.state_size = state_size
         self.action_size = action_size
 
         if genome is None:
-            genome = [2, 16, 0, 16, 0, 16, 0] + [0.0] * 756
+            genome = [2, 64, 0, 64, 0, 64, 0] + [0.0] * MAX_WEIGHTS
 
 
         self.network = DQN(state_size, action_size, genome).to(self.device)
@@ -48,16 +34,6 @@ class Agent():
         self.update_every = 4
 
     def get_action(self, state):
-        """
-            Function:    get_action
-            Purpose:     Select an action using epsilon-greedy policy.
-            Parameters:
-                        - state: Current environment state.
-            Returns:     Action index (integer).
-            Details:
-                        - With probability epsilon, selects random action (exploration).
-                        - Otherwise, selects action with highest Q-value (exploitation).
-        """
         if random.random() < self.epsilon:
             return random.randrange(self.action_size)
 
@@ -67,19 +43,6 @@ class Agent():
         return q_values.argmax(dim=1).item()
 
     def step(self, state, action, reward, next_state, done):
-        """
-            Function:    step
-            Purpose:     Store experience and trigger learning updates.
-            Parameters:
-                        - state: Current state.
-                        - action: Action taken.
-                        - reward: Reward received.
-                        - next_state: Resulting state.
-                        - done: Whether episode terminated.
-            Details:
-                        - Stores transition in replay memory.
-                        - Triggers learning every 'update_every' steps if enough samples available.
-        """
         state_t = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
         next_state_t = None if done else torch.tensor(next_state, dtype=torch.float32, device=self.device).unsqueeze(0)
 
@@ -93,16 +56,6 @@ class Agent():
             self.learn()
 
     def learn(self):
-        """
-            Function:    learn
-            Purpose:     Update network weights using sampled experiences.
-            Details:
-                        - Samples random batch from replay memory.
-                        - Computes Q-values for current states.
-                        - Computes target Q-values using target network.
-                        - Updates policy network via gradient descent on TD error.
-                        - Soft updates target network.
-        """
         transitions = self.memory.sample(self.batch_size)
         batch = Transition(*zip(*transitions))
 
@@ -136,26 +89,9 @@ class Agent():
         self.soft_update_target(tau=interpolation_parameter)
 
     def soft_update_target(self, tau=0.001):
-        """
-            Function:    soft_update_target
-            Purpose:     Gradually update target network weights toward policy network.
-            Parameters:
-                        - tau: Interpolation parameter (0 = no update, 1 = full copy).
-            Details:
-                        - Implements soft update: θ_target = τ*θ_policy + (1-τ)*θ_target
-                        - Stabilizes learning by preventing abrupt target changes.
-        """
         for target_param, param in zip(self.target_network.parameters(),
                                          self.network.parameters()):
             target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
 
     def decay_epsilon(self):
-        """
-            Function:    decay_epsilon
-            Purpose:     Reduce exploration rate over time.
-            Details:
-                        - Multiplies epsilon by decay factor.
-                        - Ensures epsilon doesn't fall below minimum threshold.
-                        - Implements gradual shift from exploration to exploitation.
-        """
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)

@@ -12,26 +12,17 @@ discount_factor = 0.99
 replay_buffer_size = int(1e5)
 interpolation_parameter = 0.05
 
-max_l1 = (state_size * 16) + 16    # 144
-max_l2 = (16 * 16) + 16            # 272
-max_l3 = (16 * 16) + 16            # 272
-max_out = (16 * number_actions) + number_actions # 68
+max_l1 = (state_size * 128) + 128    
+max_l2 = (128 * 128) + 128
+max_l3 = (128 * 128) + 128
+max_out = (128 * number_actions) + number_actions
 
-MAX_WEIGHTS = max_l1 + max_l2 + max_l3 + max_out # 756 
+MAX_WEIGHTS = max_l1 + max_l2 + max_l3 + max_out
 
 gene_space = [
-    {'low': 1, 'high': 3},                    # 1-3 layers
-    {'low': 12, 'high': 16}, {'low': 0, 'high': 4},  # layer1: 12-16 neurons
-    {'low': 12, 'high': 16}, {'low': 0, 'high': 4},  # layer2: 12-16 neurons
-    {'low': 12, 'high': 16}, {'low': 0, 'high': 4},  # layer3: 12-16 neurons
+    {'low': 1, 'high': 4},                    # 1-3 layers
+    {'low': 32, 'high': 128}, {'low': 0, 'high': 4},  # layer1: 12-16 neurons
+    {'low': 32, 'high': 128}, {'low': 0, 'high': 4},  # layer2: 12-16 neurons
+    {'low': 32, 'high': 128}, {'low': 0, 'high': 4},  # layer3: 12-16 neurons
 ] + [{'low': -1.0, 'high': 1.0}] * MAX_WEIGHTS
 
-"""
-gene_space = [
-    {'low': 2, 'high': 5},                    # num_layers
-    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer1 size, activation
-    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer2 size, activation
-    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer3 size, activation
-    {'low': 8, 'high': 64}, {'low': 0, 'high': 4},  # layer4 size, activation
-]
-"""

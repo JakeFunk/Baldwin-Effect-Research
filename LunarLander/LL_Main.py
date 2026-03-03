@@ -4,9 +4,9 @@ import csv
 from LL_Constants import gene_space
 from LL_Fitness import fitness_function
 
-POPULATION_SIZE = 50
-NUM_GENERATIONS = 100
-NUM_PARENTS = 6
+POPULATION_SIZE = 20
+NUM_GENERATIONS = 60
+NUM_PARENTS = 4
 
 def start_file_tracking():
     csv_file_avg = open("ll_baldwin_avgs.csv", "w", newline="")
