@@ -19,8 +19,7 @@ class DQN(nn.Module):
     def __init__(self, n_observations, n_actions, genome):
         super(DQN, self).__init__()
         
-        # 1. Decode ONLY the first 9 genes (the architecture)
-        arch = decode_genome(genome[:9], n_observations, n_actions)
+        arch = decode_genome(genome[:7], n_observations, n_actions)
 
         self.layers = nn.ModuleList()
         self.activation_funcs = arch['activations']
@@ -32,12 +31,10 @@ class DQN(nn.Module):
 
         self.output_layer = nn.Linear(input_size, n_actions)
 
-        # 2. INJECT WEIGHTS from the rest of the genome (genes 9 to the end)
-        if len(genome) > 9:
-            self.inject_weights(genome[9:])
+        if len(genome) > 7:
+            self.inject_weights(genome[7:])
 
     def inject_weights(self, weight_DNA):
-        """Maps the genome float array directly into the neural network connections."""
         with torch.no_grad():
             ptr = 0
             for param in self.parameters():
@@ -60,7 +57,7 @@ def decode_genome(genome, input_size, output_size):
         0: F.relu, 1: torch.tanh, 2: torch.sigmoid, 3: lambda x: F.leaky_relu(x, 0.01)
     }
     arch = {'layers': [], 'activations': []}
-    num_layers = min(4, int(genome[0]))
+    num_layers = min(3, int(genome[0]))
 
     for i in range(num_layers):
         layer_size = int(genome[1 + i*2])

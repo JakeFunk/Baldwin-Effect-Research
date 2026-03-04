@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import csv
+import numpy as np
 
 env = gym.make("LunarLander-v3", render_mode = "human")
 state_shape = env.observation_space.shape
@@ -47,6 +48,7 @@ class DQN(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         return self.layer3(x)
+
 class Agent():
     def __init__(self, state_size, action_size):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -142,13 +144,22 @@ render_env = gym.make("LunarLander-v3", render_mode="human")
 
 num_episodes = 1000
 
-# Open CSV and write header
-csv_file = open("ideal_agent_behavior.csv", "w", newline="")
-writer = csv.writer(csv_file)
-writer.writerow(["episode", "step", "state", "action", "reward", "cumulative_reward"])
+csv_file_step = open("ideal_agent_behavior.csv", "w", newline="")
+step_writer = csv.writer(csv_file_step)
+step_writer.writerow(["episode", "step", "state", "action", "reward", "cumulative_reward"])
+
+csv_file_episode = open("ideal_agent_episode_stats.csv", "w", newline="")
+episode_writer = csv.writer(csv_file_episode)
+episode_writer.writerow([
+    "episode",
+    "total_reward",
+    "action_prob_0",
+    "action_prob_1",
+    "action_prob_2",
+    "action_prob_3"
+])
 
 for episode in range(num_episodes):
-
     render = (episode % 100) < 5
     env = render_env if render else train_env
 
@@ -156,9 +167,12 @@ for episode in range(num_episodes):
     done = False
     total_reward = 0
     step_num = 0
+    actions_taken = []  # Track actions for this episode
 
     while not done:
         action = agent.get_action(state)
+        actions_taken.append(action)
+        
         next_state, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
 
@@ -167,7 +181,7 @@ for episode in range(num_episodes):
 
         total_reward += reward
 
-        writer.writerow([
+        step_writer.writerow([
             episode,
             step_num,
             state.tolist(),
@@ -179,16 +193,30 @@ for episode in range(num_episodes):
         state = next_state
         step_num += 1
 
+    # Calculate action probabilities for this episode
+    action_counts = np.bincount(actions_taken, minlength=4)
+    action_probs = action_counts / action_counts.sum()
+
+    # Write episode stats
+    episode_writer.writerow([
+        episode,
+        total_reward,
+        action_probs[0],
+        action_probs[1],
+        action_probs[2],
+        action_probs[3]
+    ])
+
     if not render:
         agent.decay_epsilon()
 
     if episode % 10 == 0:
         print(f"Episode {episode} Reward {total_reward:.1f} Render={render}")
 
-csv_file.close()
+csv_file_step.close()
+csv_file_episode.close()
 train_env.close()
 render_env.close()
 
 torch.save(agent.network.state_dict(), "LL_Ideal_Agent.pth")
 print(f"Model has been saved as LL_Ideal_Agent")
-
