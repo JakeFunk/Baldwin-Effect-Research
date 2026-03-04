@@ -3,6 +3,8 @@ import copy
 import random
 import numpy as np
 from MGModelCreation import make_env, make_model
+from MGWrappers import UnWrappers
+
 
 ENV_ID = "MiniGrid-LavaGapS7-v0"
 GENERATIONS = 60
@@ -66,6 +68,8 @@ class MGGeneticAlgorithm:
 
         expert_actions = []
         agent_actions = []
+        
+        flat_obs = UnWrappers.flatten_env_grid(env)
 
         for _ in range(MAX_STEPS):
             # Perform predictions on both the expert's model and the individual agents model.
@@ -86,7 +90,7 @@ class MGGeneticAlgorithm:
             if done[0]:
                 break
 
-        return matches / steps if steps else 0.0, expert_actions, agent_actions, obs[0].flatten().tolist()
+        return matches / steps if steps else 0.0, expert_actions, agent_actions, flat_obs
 
     def policy_entropy(self, model, env):
         # Ensure the environment is set to a start state.

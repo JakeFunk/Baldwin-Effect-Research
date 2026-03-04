@@ -11,7 +11,7 @@ ENV_ID = "MiniGrid-LavaGapS7-v0"
 GENERATIONS = 60
 
 def start_file_tracking():
-    csv_file_avg = open("ppo_baldwin_avgs.csv", "w", newline="")
+    csv_file_avg = open("minigrid_avgs.csv", "w", newline="")
     avg_writer = csv.writer(csv_file_avg)
     avg_writer.writerow(
         [
@@ -24,7 +24,7 @@ def start_file_tracking():
         ]
     )
 
-    csv_file_gen = open("ppo_baldwin_stats.csv", "w", newline="")
+    csv_file_gen = open("minigrid_stats.csv", "w", newline="")
     gen_writer = csv.writer(csv_file_gen)
     gen_writer.writerow(
         [

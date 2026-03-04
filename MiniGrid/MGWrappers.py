@@ -3,6 +3,7 @@ import torch.nn as nn
 import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from minigrid.core.world_object import Wall, Lava, Goal
 
 
 class ValidActionsWrapper(gym.Wrapper):
@@ -34,3 +35,28 @@ class FeaturesExtractor(BaseFeaturesExtractor):
 
     def forward(self, obs):
         return self.linear(self.cnn(obs))
+
+class UnWrappers():
+    @staticmethod
+    def unwrap_env(env):
+        if hasattr(env, "envs"):
+            env = env.envs[0]
+
+        while hasattr(env, "env"):
+            env = env.env
+
+        return env
+
+    @staticmethod
+    def flatten_env_grid(vec_env):
+        env = UnWrappers.unwrap_env(vec_env)
+
+        obj_to_id = {None: 0, Wall: 1, Lava: 2, Goal: 5}
+        flat_env = []
+
+        for y in range(env.height):
+            for x in range(env.width):
+                cell = env.grid.get(x, y)
+                flat_env.append(obj_to_id.get(type(cell), 0))
+
+        return flat_env
