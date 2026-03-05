@@ -13,7 +13,7 @@ class ReplayEnv(MiniGridEnv):
         individual,
         env_flat,
         size=7,
-        agent_start_pos=(2,2),
+        agent_start_pos=(1,1),
         agent_start_dir=0,
         max_steps=None,
         **kwargs
@@ -67,13 +67,13 @@ class ReplayEnv(MiniGridEnv):
                     self.grid.set(x, y, None)
 
         # Place the agent at it's starting position
-        self.agent_pos = np.array(self.agent_start_pos)
+        self.agent_pos = self.agent_start_pos
         self.agent_dir = self.agent_start_dir
 
         self.mission = f"Generation {self.generation} - {self.individual}"
 
 def main():
-    df = pd.read_csv("minigrid_stats.csv")
+    df = pd.read_csv("Run 5/minigrid_stats.csv")
     for _, row in df.iterrows():
         # Obtain the necessary data from the row
         env_flat = json.loads(row["agreement_env_flattened"])
@@ -84,9 +84,13 @@ def main():
         
         # Generate the same environment the agreement was assessed on
         env = ReplayEnv(generation, individual, env_flat, render_mode="human")
-        for a_actions, e_actions in zip(agent_actions, expert_actions):
-            #TODO Not implemented yet
-            pass
+        env.reset()
+        
+        for i, (a_action, e_action) in enumerate(zip(agent_actions, expert_actions)):
+            if a_action != e_action:
+                print(f"Disagreement in {generation} - {individual} step {i}: agent={a_action}, expert={e_action}")
+            env.step(e_action)
+            
     
 if __name__ == '__main__':
     main() 
