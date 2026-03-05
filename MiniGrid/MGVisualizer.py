@@ -1,4 +1,5 @@
 import json
+import csv
 import pandas as pd
 import numpy as np
 from minigrid.minigrid_env import MiniGridEnv
@@ -71,8 +72,52 @@ class ReplayEnv(MiniGridEnv):
         self.agent_dir = self.agent_start_dir
 
         self.mission = f"Generation {self.generation} - {self.individual}"
+        
+    def serialize_grid(self):
+        width, height = self.width, self.height
+        grid_array = np.zeros((height, width), dtype=int)
+
+        for y in range(height):
+            for x in range(width):
+                cell = self.grid.get(x, y)
+                if cell is None:
+                    grid_array[y, x] = 0
+                elif isinstance(cell, Wall):
+                    grid_array[y, x] = 1
+                elif isinstance(cell, Lava):
+                    grid_array[y, x] = 2
+                elif isinstance(cell, Goal):
+                    grid_array[y, x] = 5
+                else:
+                    grid_array[y, x] = 9
+
+        x, y = self.agent_pos
+
+        return {
+            "grid": grid_array.tolist(),
+            "agent_pos": (int(x), int(y)),
+            "agent_dir": self.agent_dir,
+            "generation": self.generation,
+            "individual": self.individual,
+            "step_count": self.step_count,
+        }
 
 def main():
+    csv_file = open("minigrid_disagreements.csv", "w", newline="")
+    csv_writer = csv.writer(csv_file)
+    csv_writer.writerow(
+        [
+            "generation",
+            "individual",
+            "agent_actions",
+            "expert_actions",
+            "disagreement_step",
+            "agent_proposed",
+            "expert_performed",
+            "env_at_disagreement"
+        ]
+    )
+    
     df = pd.read_csv("Run 5/minigrid_stats.csv")
     for _, row in df.iterrows():
         # Obtain the necessary data from the row
@@ -83,12 +128,25 @@ def main():
         individual = row["individual"]
         
         # Generate the same environment the agreement was assessed on
-        env = ReplayEnv(generation, individual, env_flat, render_mode="human")
+        env = ReplayEnv(generation, individual, env_flat)
         env.reset()
         
         for i, (a_action, e_action) in enumerate(zip(agent_actions, expert_actions)):
             if a_action != e_action:
-                print(f"Disagreement in {generation} - {individual} step {i}: agent={a_action}, expert={e_action}")
+                env_snapshot = env.serialize_grid()
+                csv_writer.writerow(
+                    [
+                        generation,
+                        individual,
+                        json.dumps(agent_actions),
+                        json.dumps(expert_actions),
+                        i,
+                        a_action,
+                        e_action,
+                        json.dumps(env_snapshot)
+                    ]
+                )
+
             env.step(e_action)
             
     
