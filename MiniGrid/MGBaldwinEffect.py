@@ -11,6 +11,14 @@ ENV_ID = "MiniGrid-LavaGapS7-v0"
 GENERATIONS = 60
 
 def start_file_tracking():
+    """
+    Creates two CSV files to store experiment statistics. One file stores the
+    averages for each generation, and the other stores the statistics for each
+    individual in every generation.
+    
+    :return: File handles and CSV writers used for recording statistics
+    :rtype: tuple[io.TextIOWrapper, io.TextIOWrapper, csv.writer, csv.writer]
+    """
     csv_file_avg = open("minigrid_avgs.csv", "w", newline="")
     avg_writer = csv.writer(csv_file_avg)
     avg_writer.writerow(
@@ -45,7 +53,7 @@ def start_file_tracking():
 
 def main():
     ga = MGGeneticAlgorithm(ENV_ID)
-    expert = PPO.load(f"{ENV_ID}_CNN")
+    expert = PPO.load(f"Data/MiniGrid-LavaGapS7-v0_PPO")
     csv_file_avg, csv_file_gen, avg_writer, gen_writer = start_file_tracking()
 
     # Variables for plotting the averages of each generation.

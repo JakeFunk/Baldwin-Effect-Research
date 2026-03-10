@@ -1,154 +1,201 @@
 import json
-import csv
+import random
 import pandas as pd
 import numpy as np
-from minigrid.minigrid_env import MiniGridEnv
-from minigrid.core.mission import MissionSpace
-from minigrid.core.grid import Grid
-from minigrid.core.world_object import Wall, Lava, Goal
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from minigrid.wrappers import ImgObsWrapper
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
+from stable_baselines3 import PPO
+from MGReplayEnv import ReplayEnv
+from MGWrappers import ValidActionsWrapper
+from MGGeneticAlgorithm import MGGeneticAlgorithm
 
-class ReplayEnv(MiniGridEnv):
-    def __init__(
-        self,
-        generation,
-        individual,
-        env_flat,
-        size=7,
-        agent_start_pos=(1,1),
-        agent_start_dir=0,
-        max_steps=None,
-        **kwargs
-    ):
-        self.generation = generation
-        self.individual = individual
-        self.env_flat = env_flat
-        self.agent_start_pos = agent_start_pos
-        self.agent_start_dir = agent_start_dir
-        
-        # Place the agent at its starting position
-        self.agent_pos = np.array(self.agent_start_pos)
-        self.agent_dir = 0
-        
-        self.step_count = 0
-        self.max_steps = max_steps or 256
-        self.terminated = False
-        self.truncated = False
-        self.carrying = None
 
-        mission_space = MissionSpace(mission_func=self._gen_mission)
+ENV_ID = "MiniGrid-LavaGapS7-v0"
+GENERATIONS = 60
+MAX_STEPS = 500
 
-        super().__init__(
-            mission_space=mission_space,
-            grid_size=size,
-            max_steps=256,
-            **kwargs,
-        )
-    
-    @staticmethod
-    def _gen_mission():
-        return "Replaying Environment"
-    
-    def _gen_grid(self, width, height):
-        self.grid = Grid(width, height)
 
-        # Reshape the CSV data to follow the MiniGrid format
-        env_array = np.array(self.env_flat[: width * height]).reshape((height, width))
+def wrap_env(env):
+    """
+    Wraps a MiniGrid environment with custom wrappers for action restriction, image observations, 
+    monitoring, and vectorization.
 
-        for y in range(height):
-            for x in range(width):
-                obj_id = env_array[y, x]
+    :param env: The raw Gym MiniGrid environment.
+    :type env: gym.Env
+    :return: A wrapped and vectorized environment ready for Stable-Baselines3.
+    :rtype: stable_baselines3.common.vec_env.VecEnv
+    """
+    env = ValidActionsWrapper(env)
+    env = ImgObsWrapper(env)
+    env = Monitor(env)
+    return VecTransposeImage(DummyVecEnv([lambda: env]))
 
-                if obj_id == 1:
-                    self.grid.set(x, y, Wall())
-                elif obj_id == 2:
-                    self.grid.set(x, y, Lava())
-                elif obj_id == 5:
-                    self.grid.set(x, y, Goal())
-                else:
-                    self.grid.set(x, y, None)
 
-        # Place the agent at it's starting position
-        self.agent_pos = self.agent_start_pos
-        self.agent_dir = self.agent_start_dir
+def run_expert(expert, env):
+    """
+    Runs a pre-trained expert model on a given environment and returns the reward obtained.
 
-        self.mission = f"Generation {self.generation} - {self.individual}"
-        
-    def serialize_grid(self):
-        width, height = self.width, self.height
-        grid_array = np.zeros((height, width), dtype=int)
+    :param expert: Pre-trained RL agent (e.g., PPO) to evaluate.
+    :type expert: stable_baselines3.common.base_class.BaseAlgorithm
+    :param env: Wrapped environment for evaluation.
+    :type env: stable_baselines3.common.vec_env.VecEnv
+    :return: Final reward obtained by the expert in the environment.
+    :rtype: float
+    """
+    obs = env.reset()
+    final_reward = 0.0
 
-        for y in range(height):
-            for x in range(width):
-                cell = self.grid.get(x, y)
-                if cell is None:
-                    grid_array[y, x] = 0
-                elif isinstance(cell, Wall):
-                    grid_array[y, x] = 1
-                elif isinstance(cell, Lava):
-                    grid_array[y, x] = 2
-                elif isinstance(cell, Goal):
-                    grid_array[y, x] = 5
-                else:
-                    grid_array[y, x] = 9
+    for _ in range(MAX_STEPS):
+        action, _ = expert.predict(obs, deterministic=True)
+        obs, reward, done, _ = env.step(action)
 
-        x, y = self.agent_pos
+        final_reward = float(reward[0])
 
-        return {
-            "grid": grid_array.tolist(),
-            "agent_pos": (int(x), int(y)),
-            "agent_dir": self.agent_dir,
-            "generation": self.generation,
-            "individual": self.individual,
-            "step_count": self.step_count,
-        }
+        if done[0]:
+            break
+
+    return final_reward
+
+
+def collect_visits(model, env):
+    """
+    Collects the number of visits each grid cell receives when a model interacts with the environment.
+
+    :param model: RL agent (e.g., PPO or genetic algorithm agent) whose behavior will be tracked.
+    :type model: object
+    :param env: Wrapped MiniGrid environment.
+    :type env: stable_baselines3.common.vec_env.VecEnv
+    :return: 2D array representing the visit counts for each cell in the environment grid.
+    :rtype: np.ndarray
+    """
+    base_env = env.envs[0].unwrapped
+    width = base_env.width
+    height = base_env.height
+
+    visits = np.zeros((height, width))
+    obs = env.reset()
+
+    for _ in range(MAX_STEPS):
+        x, y = base_env.agent_pos
+        visits[y, x] += 1
+
+        action, _ = model.predict(obs, deterministic=True)
+        obs, _, done, _ = env.step(action)
+
+        if done[0]:
+            break
+
+    return visits
+
+
+def draw_heatmap(env, visits, generation):
+    """
+    Draws and saves a heatmap of agent visits over a MiniGrid environment grid.
+
+    The intensity of each cell is proportional to the logarithm of the number of visits.
+
+    :param env: Wrapped MiniGrid environment.
+    :type env: stable_baselines3.common.vec_env.VecEnv
+    :param visits: 2D array of visit counts per grid cell.
+    :type visits: np.ndarray
+    :param generation: Current generation number (used in filename for saving heatmap).
+    :type generation: int
+    """
+    base_env = env.envs[0].unwrapped
+    grid_size = base_env.height
+
+    img = base_env.grid.render(
+        tile_size=64,
+        agent_pos=None,
+        agent_dir=None
+    )
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    ax.imshow(img)
+
+    max_visits = visits.max()
+    if max_visits == 0:
+        max_visits = 1
+
+    cell_w = img.shape[1] / grid_size
+    cell_h = img.shape[0] / grid_size
+
+    for y in range(grid_size):
+        for x in range(grid_size):
+
+            intensity = np.log1p(visits[y, x]) / np.log1p(max_visits)
+
+            if intensity > 0:
+                rect = patches.Rectangle(
+                    (x * cell_w, y * cell_h),
+                    cell_w,
+                    cell_h,
+                    linewidth=0,
+                    facecolor=(1, 0, 0, intensity * 0.6),
+                )
+                ax.add_patch(rect)
+
+    ax.axis("off")
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+    plt.savefig(
+        f"Data/Heatmaps/heatmap_gen_{generation}.png",
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0
+    )
+
+    plt.close()
+
 
 def main():
-    csv_file = open("minigrid_disagreements.csv", "w", newline="")
-    csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(
-        [
-            "generation",
-            "individual",
-            "agent_actions",
-            "expert_actions",
-            "disagreement_step",
-            "agent_proposed",
-            "expert_performed",
-            "env_at_disagreement"
-        ]
-    )
-    
-    df = pd.read_csv("Run 5/minigrid_stats.csv")
-    for _, row in df.iterrows():
-        # Obtain the necessary data from the row
-        env_flat = json.loads(row["agreement_env_flattened"])
-        agent_actions = json.loads(row["agreement_agent_actions"])
-        expert_actions = json.loads(row["agreement_expert_actions"])
-        generation = row["generation"]
-        individual = row["individual"]
-        
-        # Generate the same environment the agreement was assessed on
-        env = ReplayEnv(generation, individual, env_flat)
-        env.reset()
-        
-        for i, (a_action, e_action) in enumerate(zip(agent_actions, expert_actions)):
-            if a_action != e_action:
-                env_snapshot = env.serialize_grid()
-                csv_writer.writerow(
-                    [
-                        generation,
-                        individual,
-                        json.dumps(agent_actions),
-                        json.dumps(expert_actions),
-                        i,
-                        a_action,
-                        e_action,
-                        json.dumps(env_snapshot)
-                    ]
-                )
+    # Load data from the previously trained data
+    df = pd.read_csv("Data/minigrid_stats.csv")
+    environments = df["agreement_env_flattened"]
 
-            env.step(e_action)
-            
-    
-if __name__ == '__main__':
-    main() 
+    # Select a random environment and create it
+    rand_idx = random.randint(0, len(environments) - 1)
+    selected_env = json.loads(environments[rand_idx])
+    env = ReplayEnv(selected_env, render_mode="rgb_array")
+    env = wrap_env(env)
+
+    # Load the agent, and run through the environment with it
+    expert = PPO.load(f"Data/MiniGrid-LavaGapS7-v0_PPO")
+    optimal_reward = run_expert(expert, env)
+
+    print(f"Operating on Environment: {rand_idx}")
+    print(selected_env)
+    print(f"Optimal Reward: {optimal_reward:.2f}")
+
+    # Perform the training on the environment and obtain the heat map
+    ga = MGGeneticAlgorithm(ENV_ID)
+    for gen in range(GENERATIONS):
+        scored = []
+        pre_rewards = []
+        post_rewards = []
+
+        for i, ind in enumerate(ga.population):
+            pre_reward = ga.rollout_reward(ind, env)
+            ind.learn(total_timesteps=ga.learning_steps(gen))
+            post_reward = ga.rollout_reward(ind, env)
+
+            gain = post_reward - pre_reward
+            pre_rewards.append(pre_reward)
+            post_rewards.append(post_reward)
+            scored.append((gain, ind))
+
+        print(f"Generation {gen} | Pre: {np.mean(pre_rewards)} | Post: {np.mean(post_rewards)}")
+
+        best_agent = max(scored, key=lambda x: x[0])[1]
+        visits = collect_visits(best_agent, env)
+        draw_heatmap(env, visits, gen)
+
+        ga.evolve(scored)
+
+
+if __name__ == "__main__":
+    main()
