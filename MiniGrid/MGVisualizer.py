@@ -60,34 +60,34 @@ def run_expert(expert, env):
     return final_reward
 
 
-def collect_visits(model, env):
+def collect_visits(model, env, num_rollouts=20):
     """
-    Collects the number of visits each grid cell receives when a model interacts with the environment.
+    Collects the number of visits each grid cell receives when a model interacts with the environment,
+    averaged over multiple stochastic rollouts.
 
-    :param model: RL agent (e.g., PPO or genetic algorithm agent) whose behavior will be tracked.
-    :type model: object
+    :param model: RL agent (e.g., PPO or GA agent) whose behavior will be tracked.
     :param env: Wrapped MiniGrid environment.
-    :type env: stable_baselines3.common.vec_env.VecEnv
-    :return: 2D array representing the visit counts for each cell in the environment grid.
-    :rtype: np.ndarray
+    :param num_rollouts: Number of independent episodes to run for averaging visits.
+    :return: 2D array representing averaged visit counts for each cell in the environment grid.
     """
     base_env = env.envs[0].unwrapped
     width = base_env.width
     height = base_env.height
 
     visits = np.zeros((height, width))
-    obs = env.reset()
 
-    for _ in range(MAX_STEPS):
-        x, y = base_env.agent_pos
-        visits[y, x] += 1
+    for _ in range(num_rollouts):
+        obs = env.reset()
+        done = [False]
 
-        action, _ = model.predict(obs, deterministic=True)
-        obs, _, done, _ = env.step(action)
+        while not done[0]:
+            x, y = base_env.agent_pos
+            visits[y, x] += 1
 
-        if done[0]:
-            break
+            action, _ = model.predict(obs, deterministic=False)
+            obs, _, done, _ = env.step(action)
 
+    visits /= num_rollouts
     return visits
 
 
@@ -143,7 +143,7 @@ def draw_heatmap(env, visits, generation):
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     plt.savefig(
-        f"Data/Heatmaps/heatmap_gen_{generation:.2d}.png",
+        f"Data/Heatmaps/heatmap_gen_{generation:02d}.png",
         dpi=300,
         bbox_inches="tight",
         pad_inches=0
@@ -188,10 +188,10 @@ def main():
             post_rewards.append(post_reward)
             scored.append((gain, ind))
 
-        print(f"Generation {gen} | Pre: {np.mean(pre_rewards)} | Post: {np.mean(post_rewards)}")
+        print(f"Generation {gen:02d} | Pre: {np.mean(pre_rewards):.2f} | Post: {np.mean(post_rewards):.2f}")
 
         best_agent = max(scored, key=lambda x: x[0])[1]
-        visits = collect_visits(best_agent, env)
+        visits = collect_visits(best_agent, env, num_rollouts=10)
         draw_heatmap(env, visits, gen)
 
         ga.evolve(scored)
