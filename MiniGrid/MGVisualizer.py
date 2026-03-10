@@ -34,32 +34,6 @@ def wrap_env(env):
     return VecTransposeImage(DummyVecEnv([lambda: env]))
 
 
-def run_expert(expert, env):
-    """
-    Runs a pre-trained expert model on a given environment and returns the reward obtained.
-
-    :param expert: Pre-trained RL agent (e.g., PPO) to evaluate.
-    :type expert: stable_baselines3.common.base_class.BaseAlgorithm
-    :param env: Wrapped environment for evaluation.
-    :type env: stable_baselines3.common.vec_env.VecEnv
-    :return: Final reward obtained by the expert in the environment.
-    :rtype: float
-    """
-    obs = env.reset()
-    final_reward = 0.0
-
-    for _ in range(MAX_STEPS):
-        action, _ = expert.predict(obs, deterministic=True)
-        obs, reward, done, _ = env.step(action)
-
-        final_reward = float(reward[0])
-
-        if done[0]:
-            break
-
-    return final_reward
-
-
 def collect_visits(model, env, num_rollouts=20):
     """
     Collects the number of visits each grid cell receives when a model interacts with the environment,
@@ -84,14 +58,14 @@ def collect_visits(model, env, num_rollouts=20):
             x, y = base_env.agent_pos
             visits[y, x] += 1
 
-            action, _ = model.predict(obs, deterministic=False)
+            action, _ = model.predict(obs, deterministic=True)
             obs, _, done, _ = env.step(action)
 
     visits /= num_rollouts
     return visits
 
 
-def draw_heatmap(env, visits, generation):
+def draw_heatmap(env, visits, name):
     """
     Draws and saves a heatmap of agent visits over a MiniGrid environment grid.
 
@@ -143,13 +117,42 @@ def draw_heatmap(env, visits, generation):
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     plt.savefig(
-        f"Data/Heatmaps/heatmap_gen_{generation:02d}.png",
+        f"Data/Heatmaps/{name}.png",
         dpi=300,
         bbox_inches="tight",
         pad_inches=0
     )
 
     plt.close()
+
+
+def run_expert(expert, env):
+    """
+    Runs a pre-trained expert model on a given environment and returns the reward obtained.
+
+    :param expert: Pre-trained RL agent (e.g., PPO) to evaluate.
+    :type expert: stable_baselines3.common.base_class.BaseAlgorithm
+    :param env: Wrapped environment for evaluation.
+    :type env: stable_baselines3.common.vec_env.VecEnv
+    :return: Final reward obtained by the expert in the environment.
+    :rtype: float
+    """
+    obs = env.reset()
+    final_reward = 0.0
+
+    for _ in range(MAX_STEPS):
+        action, _ = expert.predict(obs, deterministic=True)
+        obs, reward, done, _ = env.step(action)
+
+        final_reward = float(reward[0])
+
+        if done[0]:
+            break
+        
+    visits = collect_visits(expert, env, num_rollouts=10)
+    draw_heatmap(env, visits, f"heatmap_expert")
+
+    return final_reward
 
 
 def main():
@@ -192,10 +195,9 @@ def main():
 
         best_agent = max(scored, key=lambda x: x[0])[1]
         visits = collect_visits(best_agent, env, num_rollouts=10)
-        draw_heatmap(env, visits, gen)
+        draw_heatmap(env, visits, f"heatmap_gen_{gen:02d}")
 
         ga.evolve(scored)
-
 
 if __name__ == "__main__":
     main()
