@@ -19,7 +19,7 @@ def start_file_tracking():
     :return: File handles and CSV writers used for recording statistics
     :rtype: tuple[io.TextIOWrapper, io.TextIOWrapper, csv.writer, csv.writer]
     """
-    csv_file_avg = open("minigrid_avgs.csv", "w", newline="")
+    csv_file_avg = open("Data/Statistics/minigrid_avgs.csv", "w", newline="")
     avg_writer = csv.writer(csv_file_avg)
     avg_writer.writerow(
         [
@@ -32,7 +32,7 @@ def start_file_tracking():
         ]
     )
 
-    csv_file_gen = open("minigrid_stats.csv", "w", newline="")
+    csv_file_gen = open("Data/Statistics/minigrid_stats.csv", "w", newline="")
     gen_writer = csv.writer(csv_file_gen)
     gen_writer.writerow(
         [
@@ -53,7 +53,7 @@ def start_file_tracking():
 
 def main():
     ga = MGGeneticAlgorithm(ENV_ID)
-    expert = PPO.load(f"Data/MiniGrid-LavaGapS7-v0_PPO")
+    expert = PPO.load(f"Data/Model/MiniGrid-LavaGapS7-v0_PPO")
     csv_file_avg, csv_file_gen, avg_writer, gen_writer = start_file_tracking()
 
     # Variables for plotting the averages of each generation.

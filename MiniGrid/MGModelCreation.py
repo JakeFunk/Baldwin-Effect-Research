@@ -64,7 +64,7 @@ def make_model(env, verbosity=0):
 def main():
     model = make_model(make_env("MiniGrid-LavaGapS7-v0"), verbosity=1)
     model.learn(total_timesteps=500_000)
-    model.save(f"MiniGrid-LavaGapS7-v0_PPO")
+    model.save(f"Data/Model/MiniGrid-LavaGapS7-v0_PPO")
 
 
 if __name__ == "__main__":

@@ -143,7 +143,7 @@ def draw_heatmap(env, visits, generation):
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
     plt.savefig(
-        f"Data/Heatmaps/heatmap_gen_{generation}.png",
+        f"Data/Heatmaps/heatmap_gen_{generation:.2d}.png",
         dpi=300,
         bbox_inches="tight",
         pad_inches=0
@@ -154,7 +154,7 @@ def draw_heatmap(env, visits, generation):
 
 def main():
     # Load data from the previously trained data
-    df = pd.read_csv("Data/minigrid_stats.csv")
+    df = pd.read_csv("Data/Statistics/minigrid_stats.csv")
     environments = df["agreement_env_flattened"]
 
     # Select a random environment and create it
@@ -164,7 +164,7 @@ def main():
     env = wrap_env(env)
 
     # Load the agent, and run through the environment with it
-    expert = PPO.load(f"Data/MiniGrid-LavaGapS7-v0_PPO")
+    expert = PPO.load(f"Data/Model/MiniGrid-LavaGapS7-v0_PPO")
     optimal_reward = run_expert(expert, env)
 
     print(f"Operating on Environment: {rand_idx}")
