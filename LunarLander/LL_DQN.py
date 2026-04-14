@@ -23,6 +23,7 @@ class DQN(nn.Module):
 
         self.layers = nn.ModuleList()
         self.activation_funcs = arch['activations']
+        self.activation_names = arch['names']
 
         input_size = n_observations
         for layer_size in arch['layers']:
@@ -54,15 +55,22 @@ class DQN(nn.Module):
 
 def decode_genome(genome, input_size, output_size):
     activation_map = {
-        0: F.relu, 1: torch.tanh, 2: torch.sigmoid, 3: lambda x: F.leaky_relu(x, 0.01)
+        0: (F.relu, 'relu'),
+        1: (torch.tanh, 'tanh'),
+        2: (torch.sigmoid, 'sigmoid'),
+        3: (lambda x: F.leaky_relu(x, 0.01), 'leaky_relu')
     }
-    arch = {'layers': [], 'activations': []}
+    arch = {'layers': [], 'activations': [], 'names':[] }
     num_layers = min(3, int(genome[0]))
 
     for i in range(num_layers):
         layer_size = int(genome[1 + i*2])
         activation_idx = int(genome[2 + i*2]) % 4
+        
+        func, name = activation_map[activation_idx]
+        
         arch['layers'].append(layer_size)
-        arch['activations'].append(activation_map[activation_idx])
+        arch['activations'].append(func)
+        arch['names'].append(name)
 
     return arch
