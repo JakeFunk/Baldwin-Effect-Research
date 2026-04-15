@@ -83,7 +83,7 @@ def main():
     model = make_model(make_env("MiniGrid-LavaGapS7-v0"), verbosity=1)
     callback = RewardTrackingCallback()
     model.learn(total_timesteps=500_000, callback=callback)
-    model.save("TEST_MiniGrid-LavaGapS7-v0_PPO")
+    model.save("MiniGrid-LavaGapS7-v0_PPO")
     plot_learning_curve(callback)
 
 
