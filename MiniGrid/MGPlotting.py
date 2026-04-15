@@ -145,6 +145,8 @@ def plot_policy_analysis(csv_path):
     plt.ylim(0, 1.05)
     plt.legend()
     plt.tight_layout()
+    
+    plt.savefig("Data/Figures/Policy_Analysis.png")
     plt.show()
 
 
