@@ -3,8 +3,26 @@ from minigrid.wrappers import ImgObsWrapper
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
+from stable_baselines3.common.callbacks import BaseCallback
 from MGWrappers import FeaturesExtractor, ValidActionsWrapper
+from MGPlotting import plot_learning_curve
 
+class RewardTrackingCallback(BaseCallback):
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+        self.rewards = []
+        self.iterations = []
+        self.current_iteration = 0
+
+    def _on_rollout_end(self) -> None:
+        self.current_iteration += 1
+
+    def _on_step(self) -> bool:
+        for info in self.locals["infos"]:
+            if "episode" in info:
+                self.rewards.append(info["episode"]["r"])
+                self.iterations.append(self.current_iteration)
+        return True
 
 def make_env(env_id):
     """
@@ -61,10 +79,12 @@ def make_model(env, verbosity=0):
     )
 
 
-def main():
+def main():    
     model = make_model(make_env("MiniGrid-LavaGapS7-v0"), verbosity=1)
-    model.learn(total_timesteps=500_000)
-    model.save(f"Data/Model/MiniGrid-LavaGapS7-v0_PPO")
+    callback = RewardTrackingCallback()
+    model.learn(total_timesteps=500_000, callback=callback)
+    model.save("TEST_MiniGrid-LavaGapS7-v0_PPO")
+    plot_learning_curve(callback)
 
 
 if __name__ == "__main__":

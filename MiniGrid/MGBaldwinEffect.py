@@ -5,7 +5,6 @@ import numpy as np
 from stable_baselines3 import PPO
 from MGGeneticAlgorithm import MGGeneticAlgorithm
 from MGModelCreation import make_env
-from MGPlotting import plot
 
 ENV_ID = "MiniGrid-LavaGapS7-v0"
 GENERATIONS = 60
@@ -152,7 +151,6 @@ def main():
 
     csv_file_gen.close()
     csv_file_avg.close()
-    plot(avg_pre_rewards, avg_post_rewards, avg_gains, avg_agreements, avg_entropies)
 
 
 if __name__ == "__main__":
