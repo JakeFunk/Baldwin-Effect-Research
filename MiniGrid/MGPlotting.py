@@ -2,7 +2,6 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 def aggregate_by_iteration(callback):
@@ -52,26 +51,25 @@ def plot_learning_curve(callback):
     plt.show()
 
 
-def plot_metrics(avg_pre_rewards, avg_agreements, avg_entropies, window=10):
+def plot_metrics(avg_post_rewards, avg_pre_rewards, avg_agreements, avg_entropies, window=10):
     generations = np.array(avg_pre_rewards.index)
 
     pre_rewards = np.array(avg_pre_rewards)
+    post_rewards = np.array(avg_post_rewards)
     agreements = np.array(avg_agreements)
     entropies = np.array(avg_entropies)
 
-    # Correct moving averages
+    # Moving averages
     pre_smooth = moving_average(pre_rewards, window)
+    post_smooth = moving_average(post_rewards, window)
     agree_smooth = moving_average(agreements, window)
     entropy_smooth = moving_average(entropies, window)
 
     plt.figure(figsize=(10, 5))
 
-    # Raw points
     plt.scatter(generations, pre_rewards, color="#1f77b4", s=10, alpha=0.4)
-    plt.scatter(generations, agreements, color="#ff7f0e", s=10, alpha=0.4)
-    plt.scatter(generations, entropies, color="#2ca02c", s=10, alpha=0.4)
+    plt.scatter(generations, post_rewards, color="#d62728", s=10, alpha=0.4)
 
-    # Smoothed lines
     plt.plot(
         generations,
         pre_smooth,
@@ -79,6 +77,36 @@ def plot_metrics(avg_pre_rewards, avg_agreements, avg_entropies, window=10):
         linewidth=2,
         label="Pre-Learning Reward",
     )
+
+    plt.plot(
+        generations,
+        post_smooth,
+        color="#d62728",
+        linewidth=2,
+        label="Post-Learning Reward",
+    )
+
+    plt.xlabel("Generation")
+    plt.ylabel("Reward")
+    plt.title("MiniGrid Reward Trends")
+    plt.xlim(0, generations.max())
+
+    plt.legend(frameon=False)
+    plt.grid(True, linestyle="--", alpha=0.5)
+
+    plt.savefig(
+        "Data/Figures/Minigrid_Rewards.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.show()
+
+    plt.figure(figsize=(10, 5))
+
+    plt.scatter(generations, agreements, color="#ff7f0e", s=10, alpha=0.4)
+    plt.scatter(generations, entropies, color="#2ca02c", s=10, alpha=0.4)
+
     plt.plot(
         generations,
         agree_smooth,
@@ -86,6 +114,7 @@ def plot_metrics(avg_pre_rewards, avg_agreements, avg_entropies, window=10):
         linewidth=2,
         label="Expert Agreement",
     )
+
     plt.plot(
         generations,
         entropy_smooth,
@@ -96,15 +125,18 @@ def plot_metrics(avg_pre_rewards, avg_agreements, avg_entropies, window=10):
 
     plt.xlabel("Generation")
     plt.ylabel("Value")
-    plt.title("MiniGrid Baldwin Effect Detection")
+    plt.title("MiniGrid Behaviour Trends")
     plt.xlim(0, generations.max())
 
-    plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3, frameon=False)
-
+    plt.legend(frameon=False)
     plt.grid(True, linestyle="--", alpha=0.5)
-    plt.subplots_adjust(bottom=0.25)
 
-    plt.savefig("Data/Figures/Minigrid_Metrics.png", dpi=300, bbox_inches="tight")
+    plt.savefig(
+        "Data/Figures/Minigrid_Behaviour.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
     plt.show()
     
 
@@ -118,7 +150,6 @@ def plot_policy_analysis(csv_path):
     )
 
     plt.figure(figsize=(14, 7))
-    sns.set(style="whitegrid", context="talk")
 
     before = summary[summary["target_phase"] == "before"]
     after = summary[summary["target_phase"] == "after"]
@@ -153,11 +184,12 @@ def plot_policy_analysis(csv_path):
 def main() -> None:
     data = pd.read_csv("Data/Statistics/minigrid_stats.csv")
     grouped = data.groupby("generation").mean(numeric_only=True)
+    post_rewards = grouped["post_learn_reward"]
     pre_rewards = grouped["pre_learn_reward"]
     agreements = grouped["agreement"]
     entropies = grouped["entropy"]
 
-    plot_metrics(pre_rewards, agreements, entropies)
+    plot_metrics(post_rewards, pre_rewards, agreements, entropies)
 
 
 if __name__ == "__main__":
