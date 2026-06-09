@@ -140,45 +140,136 @@ def plot_metrics(avg_post_rewards, avg_pre_rewards, avg_agreements, avg_entropie
     plt.show()
     
 
-def plot_policy_analysis(csv_path):
-    df = pd.read_csv(csv_path)
+def plot_assimilation_summary_panel(events, output_dir):
 
-    summary = (
-        df.groupby(["target_gen", "target_phase"])["agreement"]
-        .mean()
-        .reset_index()
+    if events.empty:
+        print("No event data")
+        return
+
+    import matplotlib.pyplot as plt
+
+    # ---- global styling (local to function) ----
+    plt.rcParams.update({
+        "font.size": 11,
+        "axes.titlesize": 13,
+        "axes.labelsize": 11
+    })
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+    total = len(events)
+    assimilated = events["assimilation_generation"].notna().sum()
+    not_assimilated = total - assimilated
+
+    ax1.pie(
+        [assimilated, not_assimilated],
+        labels=["Assimilated", "Not Assimilated"],
+        autopct="%1.1f%%",
+        startangle=90,
+        colors=["#2ecc71", "#e74c3c"],
+        wedgeprops={"edgecolor": "white", "linewidth": 1}
     )
 
-    plt.figure(figsize=(14, 7))
+    ax1.set_title("Assimilation Rate")
 
-    before = summary[summary["target_phase"] == "before"]
-    after = summary[summary["target_phase"] == "after"]
+    counts = events["persistent"].value_counts()
 
-    plt.plot(
-        before["target_gen"],
-        before["agreement"],
-        marker="o",
-        linewidth=2,
-        label="Starting Policy"
+    persistent = counts.get(True, 0)
+    non_persistent = counts.get(False, 0)
+
+    ax2.pie(
+        [persistent, non_persistent],
+        labels=["Persistent", "Non-persistent"],
+        autopct="%1.1f%%",
+        startangle=90,
+        colors=["#3498db", "#95a5a6"],
+        wedgeprops={"edgecolor": "white", "linewidth": 1}
     )
 
-    plt.plot(
-        after["target_gen"],
-        after["agreement"],
-        marker="s",
-        linewidth=2,
-        label="Learned Policy"
+    ax2.set_title("Persistence of Assimilation")
+
+    fig.suptitle("MiniGrid Assimilation Summary", fontsize=16, fontweight="bold")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.92])
+
+    plt.savefig(
+        f"{output_dir}/MiniGrid_Assimilation_Summary_Panel.png",
+        dpi=300,
+        bbox_inches="tight"
     )
 
-    plt.title("Policy Agreement Throughout Evolution")
-    plt.xlabel("Generation")
-    plt.ylabel("Agreement With Final Generation")
-    plt.ylim(0, 1.05)
-    plt.legend()
+    plt.close()
+
+
+def plot_lag_distribution(events, output_dir):
+    lags = events["lag"].dropna()
+
+    if len(lags) == 0:
+        print("No assimilation lags found")
+        return
+
+    plt.figure(figsize=(10, 6))
+
+    plt.hist(lags, bins=20)
+
+    plt.title("Assimilation Lag Distribution")
+    plt.xlabel("Lag (generations)")
+    plt.ylabel("Count")
+
     plt.tight_layout()
+    plt.savefig(f"{output_dir}/MiniGrid_Assimilation_Lag_Distribution.png")
+    plt.close()
+
+
+def plot_learning_timeline(events, output_dir):
+    df = events.dropna(subset=["assimilation_generation"])
+
+    if df.empty:
+        print("No assimilation events for timeline")
+        return
+
+    plt.figure(figsize=(10, 6))
+
+    plt.scatter(
+        df["learned_generation"],
+        df["assimilation_generation"],
+        alpha=0.4
+    )
+
+    max_gen = max(
+        df["learned_generation"].max(),
+        df["assimilation_generation"].max()
+    )
+
+    plt.plot(
+        [0, max_gen],
+        [0, max_gen],
+        linestyle="--",
+        label="Immediate assimilation"
+    )
+
+    plt.title("Learning vs Assimilation Timing")
+    plt.xlabel("Learned Generation")
+    plt.ylabel("Assimilation Generation")
+
+    plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/MiniGrid_Assimilation_Learning_Timeline.png")
+    plt.close()
     
-    plt.savefig("Data/Figures/Policy_Analysis.png")
-    plt.show()
+    
+def plot_assimilation_stats():
+    data_dir = "Data/Statistics/Assimilation"
+    events_dir = f"{data_dir}/events.csv"
+    modes_path = f"{data_dir}/modes.csv"
+    output_dir = f"Data/Figures"
+    
+    events = pd.read_csv(events_dir)
+    modes = pd.read_csv(modes_path)
+
+    plot_assimilation_summary_panel(events, output_dir)
+    plot_lag_distribution(events, output_dir)
+    plot_learning_timeline(events, output_dir)
 
 
 def main() -> None:

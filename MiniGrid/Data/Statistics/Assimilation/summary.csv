@@ -1,0 +1,2 @@
+total_events,assimilated_events,assimilation_rate,persistent_events,persistent_rate,mean_lag,median_lag,max_lag,num_states
+501,436,0.8702594810379242,94,0.18762475049900199,2.2545871559633026,1.0,26.0,125
