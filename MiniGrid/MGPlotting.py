@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -140,136 +140,83 @@ def plot_metrics(avg_post_rewards, avg_pre_rewards, avg_agreements, avg_entropie
     plt.show()
     
 
-def plot_assimilation_summary_panel(events, output_dir):
-
-    if events.empty:
-        print("No event data")
-        return
-
+def plot_event_locations(events, flat_env, side, out_path, title="Assimilated state locations"):
+    import numpy as np
     import matplotlib.pyplot as plt
 
-    # ---- global styling (local to function) ----
-    plt.rcParams.update({
-        "font.size": 11,
-        "axes.titlesize": 13,
-        "axes.labelsize": 11
-    })
+    grid = np.array(flat_env).reshape(side, side)
+    counts = np.zeros((side, side))
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-    total = len(events)
-    assimilated = events["assimilation_generation"].notna().sum()
-    not_assimilated = total - assimilated
+    for e in events:
+        x, y, _d = e["state"]
+        counts[y, x] += 1
 
-    ax1.pie(
-        [assimilated, not_assimilated],
-        labels=["Assimilated", "Not Assimilated"],
-        autopct="%1.1f%%",
-        startangle=90,
-        colors=["#2ecc71", "#e74c3c"],
-        wedgeprops={"edgecolor": "white", "linewidth": 1}
-    )
+    fig, ax = plt.subplots(figsize=(6, 6))
 
-    ax1.set_title("Assimilation Rate")
+    # background: show walls/lava/goal
+    bg = np.zeros((side, side, 3))
+    bg[grid == 1] = [0.3, 0.3, 0.3]   # wall - gray
+    bg[grid == 2] = [1.0, 0.4, 0.4]   # lava - red
+    bg[grid == 5] = [0.4, 1.0, 0.4]   # goal - green
+    bg[grid == 0] = [1.0, 1.0, 1.0]   # empty - white
 
-    counts = events["persistent"].value_counts()
+    ax.imshow(bg, origin="upper")
 
-    persistent = counts.get(True, 0)
-    non_persistent = counts.get(False, 0)
+    # overlay counts as text/heatmap on top
+    masked = np.ma.masked_where(counts == 0, counts)
+    ax.imshow(masked, cmap="Blues", alpha=0.6, origin="upper")
 
-    ax2.pie(
-        [persistent, non_persistent],
-        labels=["Persistent", "Non-persistent"],
-        autopct="%1.1f%%",
-        startangle=90,
-        colors=["#3498db", "#95a5a6"],
-        wedgeprops={"edgecolor": "white", "linewidth": 1}
-    )
+    for y in range(side):
+        for x in range(side):
+            if counts[y, x] > 0:
+                ax.text(x, y, int(counts[y, x]), ha="center", va="center",
+                        fontsize=10, color="black")
 
-    ax2.set_title("Persistence of Assimilation")
-
-    fig.suptitle("MiniGrid Assimilation Summary", fontsize=16, fontweight="bold")
-
-    plt.tight_layout(rect=[0, 0, 1, 0.92])
-
-    plt.savefig(
-        f"{output_dir}/MiniGrid_Assimilation_Summary_Panel.png",
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-    plt.close()
-
-
-def plot_lag_distribution(events, output_dir):
-    lags = events["lag"].dropna()
-
-    if len(lags) == 0:
-        print("No assimilation lags found")
-        return
-
-    plt.figure(figsize=(10, 6))
-
-    plt.hist(lags, bins=20)
-
-    plt.title("Assimilation Lag Distribution")
-    plt.xlabel("Lag (generations)")
-    plt.ylabel("Count")
-
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/MiniGrid_Assimilation_Lag_Distribution.png")
-    plt.close()
-
-
-def plot_learning_timeline(events, output_dir):
-    df = events.dropna(subset=["assimilation_generation"])
-
-    if df.empty:
-        print("No assimilation events for timeline")
-        return
-
-    plt.figure(figsize=(10, 6))
-
-    plt.scatter(
-        df["learned_generation"],
-        df["assimilation_generation"],
-        alpha=0.4
-    )
-
-    max_gen = max(
-        df["learned_generation"].max(),
-        df["assimilation_generation"].max()
-    )
-
-    plt.plot(
-        [0, max_gen],
-        [0, max_gen],
-        linestyle="--",
-        label="Immediate assimilation"
-    )
-
-    plt.title("Learning vs Assimilation Timing")
-    plt.xlabel("Learned Generation")
-    plt.ylabel("Assimilation Generation")
-
-    plt.legend()
-
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/MiniGrid_Assimilation_Learning_Timeline.png")
-    plt.close()
+    ax.set_title(title)
+    ax.set_xticks(range(side))
+    ax.set_yticks(range(side))
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"Saved event location plot to {out_path}")
     
-    
-def plot_assimilation_stats():
-    data_dir = "Data/Statistics/Assimilation"
-    events_dir = f"{data_dir}/events.csv"
-    modes_path = f"{data_dir}/modes.csv"
-    output_dir = f"Data/Figures"
-    
-    events = pd.read_csv(events_dir)
-    modes = pd.read_csv(modes_path)
 
-    plot_assimilation_summary_panel(events, output_dir)
-    plot_lag_distribution(events, output_dir)
-    plot_learning_timeline(events, output_dir)
+def plot_persistence_distribution(events, out_path):
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
+
+    for ax, action in zip(axes, (0, 1, 2)):
+        vals = [e["persistence"] for e in events if e["learned_action"] == action]
+        ax.hist(vals, bins=20, color="steelblue", edgecolor="black")
+        ax.set_title(f"Action {action}")
+        ax.set_xlabel("Persistence (generations)")
+
+    axes[0].set_ylabel("Count")
+    fig.suptitle("Distribution of divergence persistence by action")
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+
+
+def plot_origin_gen_timeline(events, out_path, threshold=5):
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    colors = {0: "crimson", 1: "steelblue", 2: "seagreen"}
+    labels = {0: "turn left", 1: "turn right", 2: "forward"}
+
+    for action in (0, 1, 2):
+        xs = [e["origin_gen"] for e in events if e["learned_action"] == action]
+        ys = [e["persistence"] for e in events if e["learned_action"] == action]
+        ax.scatter(xs, ys, label=labels[action], color=colors[action], alpha=0.6, s=30)
+
+    ax.axvline(threshold, color="gray", linestyle="--", label=f"early/late split (gen {threshold})")
+    ax.set_xlabel("Origin generation")
+    ax.set_ylabel("Persistence (generations)")
+    ax.set_title("Divergence persistence over time, by action")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
 
 
 def main() -> None:
